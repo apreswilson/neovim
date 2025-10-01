@@ -27,86 +27,111 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-      {    "vague2k/vague.nvim",
-    lazy = false,  -- Ensure it's loaded during startup if it's your main colorscheme
-    priority = 1000,  -- Load before other plugins
-    config = function()
-      require("vague").setup({
-        -- Optional configuration here
-      })
-      vim.cmd("colorscheme vague")
-    end
-  },
-
-      {
+    {
+        "vague2k/vague.nvim",
+        lazy = false,
+        priority = 1000,
+        config = function()
+            require("vague").setup({})
+            vim.cmd("colorscheme vague")
+        end,
+    },
+    {
         "stevearc/oil.nvim",
         opts = {},
         keys = {
             { "<Leader>e", "<Cmd>Oil<CR>", desc = "Open Oil file explorer" },
+        },
     },
-    },
-        {
+    {
         "echasnovski/mini.pick",
         config = function()
             require("mini.pick").setup({
-                -- Optional: customize behavior
                 prompt = "Pick> ",
                 search_prompt = "Search> ",
-                mapping = {
-                    close = "q",
-                    confirm = "<CR>",
-                },
+                mapping = { close = "q", confirm = "<CR>" },
             })
         end,
         keys = {
             { "<Leader>p", function() vim.cmd("Pick files") end, desc = "Pick files" },
         },
     },
-        {
-        "https://github.com/windwp/nvim-autopairs",
-        event = "InsertEnter", -- Only load when you enter Insert mode
-        config = function()
-            require("nvim-autopairs").setup()
-        end,
+    {
+        "windwp/nvim-autopairs",
+        event = "InsertEnter",
+        config = function() require("nvim-autopairs").setup() end,
     },
-        {
-        "https://github.com/tpope/vim-sleuth",
-        event = { "BufReadPost", "BufNewFile" }, -- Load after your file content
-    },
-        {
-        "https://github.com/VonHeikemen/lsp-zero.nvim",
+    { "tpope/vim-sleuth", event = { "BufReadPost", "BufNewFile" } },
+    {
+        "VonHeikemen/lsp-zero.nvim",
         dependencies = {
-            "https://github.com/williamboman/mason.nvim",
-            "https://github.com/williamboman/mason-lspconfig.nvim",
-            "https://github.com/neovim/nvim-lspconfig",
-            "https://github.com/hrsh7th/cmp-nvim-lsp",
-            "https://github.com/hrsh7th/nvim-cmp",
-            "https://github.com/L3MON4D3/LuaSnip",
+            "williamboman/mason.nvim",
+            "williamboman/mason-lspconfig.nvim",
+            "neovim/nvim-lspconfig",
+            "hrsh7th/nvim-cmp",
+            "hrsh7th/cmp-nvim-lsp",
+            "L3MON4D3/LuaSnip",
         },
         config = function()
-            local lsp_zero = require('lsp-zero')
+            local cmp = require("cmp")
+            local cmp_nvim_lsp = require("cmp_nvim_lsp")
+            local luasnip = require("luasnip")
 
-            lsp_zero.on_attach(function(client, bufnr)
-                lsp_zero.default_keymaps({buffer = bufnr})
-            end)
+            local capabilities = vim.tbl_extend(
+                "force",
+                vim.lsp.protocol.make_client_capabilities(),
+                cmp_nvim_lsp.default_capabilities()
+            )
+
+            vim.api.nvim_create_autocmd("LspAttach", {
+                callback = function(event)
+                    local opts = { buffer = event.buf }
+                    local keymaps = { K = vim.lsp.buf.hover, gd = vim.lsp.buf.definition, gr = vim.lsp.buf.references }
+                    for k, v in pairs(keymaps) do
+                        vim.keymap.set("n", k, v, opts)
+                    end
+                end,
+            })
 
             require("mason").setup()
             require("mason-lspconfig").setup({
-                ensure_installed = {
-                    -- See https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md
-                    "pyright", -- Python
-                    "rust_analyzer", -- Rust
-                    "lua_ls",
+                ensure_installed = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html" },
+            })
 
+            local servers = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html" }
+            for _, server in ipairs(servers) do
+                vim.lsp.config(server, { capabilities = capabilities })
+                vim.lsp.enable(server)
+            end
+
+            cmp.setup({
+                snippet = { expand = function(args) luasnip.lsp_expand(args.body) end },
+                mapping = {
+                    ["<CR>"] = cmp.mapping.confirm({ select = true }),
+                    ["<Tab>"] = cmp.mapping(function(fallback)
+                        if cmp.visible() then
+                            cmp.select_next_item()
+                        elseif luasnip.expand_or_jumpable() then
+                            luasnip.expand_or_jump()
+                        else
+                            fallback()
+                        end
+                    end, { "i", "s" }),
+                    ["<S-Tab>"] = cmp.mapping(function(fallback)
+                        if cmp.visible() then
+                            cmp.select_prev_item()
+                        elseif luasnip.jumpable(-1) then
+                            luasnip.jump(-1)
+                        else
+                            fallback()
+                        end
+                    end, { "i", "s" }),
                 },
-                handlers = {
-                    lsp_zero.default_setup,
-                },
+                sources = cmp.config.sources({ { name = "nvim_lsp" }, { name = "luasnip" } }, { { name = "buffer" } }),
+                completion = { autocomplete = { require("cmp.types").cmp.TriggerEvent.TextChanged } },
             })
         end,
     },
-    
-    -- nvim-ts-autotag for HTML/JSX/TSX
     {
         "windwp/nvim-ts-autotag",
         dependencies = { "nvim-treesitter/nvim-treesitter" },
@@ -115,22 +140,28 @@ require("lazy").setup({
                 ensure_installed = { "html", "javascript", "typescript", "tsx" },
                 highlight = { enable = true },
             })
-
             require("nvim-ts-autotag").setup({
-                opts = {
-                    enable_close = true,
-                    enable_rename = true,
-                    enable_close_on_slash = false,
-                },
+                opts = { enable_close = true, enable_rename = true, enable_close_on_slash = false },
                 per_filetype = {
-                    ["html"] = { enable_close = true },
-                    ["javascriptreact"] = { enable_close = true },
-                    ["typescriptreact"] = { enable_close = true },
+                    html = { enable_close = true },
+                    javascriptreact = { enable_close = true },
+                    typescriptreact = { enable_close = true },
                 },
             })
         end,
     },
-
+    -- conform.nvim for autoformat on save
+    {
+        "stevearc/conform.nvim",
+        config = function()
+            require("conform").setup({
+                format_on_save = {
+                    timeout_ms = 500,
+                    lsp_format = "fallback",
+                },
+            })
+        end,
+        event = { "BufReadPost", "BufNewFile" },
+    },
 })
-
 vim.cmd("hi StatusLine guibg=NONE")
