@@ -95,10 +95,10 @@ require("lazy").setup({
 
             require("mason").setup()
             require("mason-lspconfig").setup({
-                ensure_installed = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html" },
+                ensure_installed = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html", "cssls" },
             })
 
-            local servers = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html" }
+            local servers = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html", "cssls" }
             for _, server in ipairs(servers) do
                 vim.lsp.config(server, { capabilities = capabilities })
                 vim.lsp.enable(server)
