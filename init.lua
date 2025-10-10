@@ -1,3 +1,4 @@
+vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover info" })
 -- opts
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -5,10 +6,12 @@ vim.opt.undofile = true
 vim.opt.splitbelow = true
 vim.opt.splitright = true
 vim.opt.expandtab = true
-vim.opt.tabstop = 4
-vim.opt.shiftwidth = 0 -- set to 0 to default to tabstop value
+vim.opt.tabstop = 2
+vim.opt.shiftwidth = 2 -- set to 0 to default to tabstop value
+vim.opt.shellslash = true
 
 vim.g.mapleader = " "
+
 
 --require("config.lazy")
 ---- Visit the project page for the latest installation instructions
@@ -44,16 +47,47 @@ require("lazy").setup({
         },
     },
     {
-        "echasnovski/mini.pick",
+        "nvim-telescope/telescope.nvim",
+        tag = "0.1.8",
+        dependencies = { "nvim-lua/plenary.nvim" },
         config = function()
-            require("mini.pick").setup({
-                prompt = "Pick> ",
-                search_prompt = "Search> ",
-                mapping = { close = "q", confirm = "<CR>" },
+            local telescope = require("telescope")
+            local actions = require("telescope.actions")
+
+            telescope.setup({
+                defaults = {
+                    prompt_prefix = " ",
+                    selection_caret = " ",
+                    -- normalize backslashes for display
+                    path_display = function(_, path)
+                        return path:gsub("\\", "/")
+                    end,
+                    mappings = {
+                        i = {
+                            ["<Esc>"] = actions.close,
+                            ["<C-j>"] = actions.move_selection_next,
+                            ["<C-k>"] = actions.move_selection_previous,
+                        },
+                    },
+                },
+                pickers = {
+                    find_files = {
+                        find_command = { "rg", "--files", "--hidden", "--glob", "!.git/*", "--path-separator", "/" },
+                    },
+                    buffers = {
+                        -- normalize buffer names
+                        path_display = function(_, path)
+                            return path:gsub("\\", "/")
+                        end,
+                    },
+                },
             })
         end,
         keys = {
-            { "<Leader>p", function() vim.cmd("Pick files") end, desc = "Pick files" },
+            { "<Leader>f", "<Cmd>Telescope find_files<CR>", desc = "Find files" },
+            { "<Leader>g", "<Cmd>Telescope live_grep<CR>",  desc = "Live grep" },
+            { "<Leader>b", "<Cmd>Telescope buffers<CR>",    desc = "List buffers" },
+            { "<Leader>h", "<Cmd>Telescope help_tags<CR>",  desc = "Help tags" },
         },
     },
     {
@@ -61,7 +95,6 @@ require("lazy").setup({
         event = "InsertEnter",
         config = function() require("nvim-autopairs").setup() end,
     },
-    { "tpope/vim-sleuth", event = { "BufReadPost", "BufNewFile" } },
     {
         "VonHeikemen/lsp-zero.nvim",
         dependencies = {
@@ -95,10 +128,10 @@ require("lazy").setup({
 
             require("mason").setup()
             require("mason-lspconfig").setup({
-                ensure_installed = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html", "cssls" },
+                ensure_installed = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html", "cssls", "tailwindcss" },
             })
 
-            local servers = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html", "cssls" }
+            local servers = { "pyright", "rust_analyzer", "lua_ls", "ts_ls", "html", "cssls", "tailwindcss" }
             for _, server in ipairs(servers) do
                 vim.lsp.config(server, { capabilities = capabilities })
                 vim.lsp.enable(server)
@@ -150,7 +183,6 @@ require("lazy").setup({
             })
         end,
     },
-    -- conform.nvim for autoformat on save
     {
         "stevearc/conform.nvim",
         config = function()
@@ -163,5 +195,45 @@ require("lazy").setup({
         end,
         event = { "BufReadPost", "BufNewFile" },
     },
+    {
+        "akinsho/bufferline.nvim",
+        version = "*",
+        dependencies = "nvim-tree/nvim-web-devicons",
+        config = function()
+            require("bufferline").setup({
+                options = {
+                    -- Example options:
+                    mode = "tabs",            -- or "buffers"
+                    separator_style = "thin", -- "slant", "padded_slant", "thin", etc.
+                    diagnostics = "nvim_lsp", -- show LSP diagnostics in bufferline
+                    show_buffer_close_icons = false,
+                    show_close_icon = false,
+                    always_show_bufferline = true,
+                },
+            })
+        end,
+    },
+    {
+        "iamcco/markdown-preview.nvim",
+        ft = { "markdown" },             -- load only for markdown files
+        build = "cd app && npm install", -- install dependencies
+        init = function()
+            vim.g.mkdp_auto_start = 0    -- don't auto-start preview
+            vim.g.mkdp_auto_close = 1    -- auto close preview when buffer is closed
+            vim.g.mkdp_refresh_slow = 0
+            vim.g.mkdp_browser = ""      -- leave empty to use system default
+            vim.g.mkdp_theme = "dark"    -- can be "dark" or "light"
+        end,
+        keys = {
+            { "<leader>mp", "<cmd>MarkdownPreviewToggle<CR>", desc = "Toggle Markdown Preview" },
+        },
+    },
 })
 vim.cmd("hi StatusLine guibg=NONE")
+vim.keymap.set("n", "<leader>nt", "<cmd>tabnew<CR>", { desc = "New tab/buffer" })
+vim.keymap.set("n", "<Tab>", "<cmd>BufferLineCycleNext<CR>", { silent = true })
+vim.keymap.set("n", "<S-Tab>", "<cmd>BufferLineCyclePrev<CR>", { silent = true })
+vim.keymap.set("n", "<leader>rt", "<cmd>bdelete<CR>", { desc = "Close current buffer" })
+vim.keymap.set("n", "<leader>rs", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
+vim.keymap.set("n", "<leader>fw", "*N", { desc = "Find word under cursor" })
+vim.keymap.set('n', '<leader>.', vim.lsp.buf.code_action, { noremap = true, silent = true })
