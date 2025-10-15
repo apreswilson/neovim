@@ -52,50 +52,78 @@ require("lazy").setup({
       { "<Leader>e", "<Cmd>Oil<CR>", desc = "Open Oil file explorer" },
     },
   },
-  {
-    "nvim-telescope/telescope.nvim",
-    tag = "0.1.8",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    config = function()
-      local telescope = require("telescope")
-      local actions = require("telescope.actions")
+{
+  "ibhagwan/fzf-lua",
+  dependencies = { "nvim-tree/nvim-web-devicons" },
+  config = function()
+    local fzf = require("fzf-lua")
 
-      telescope.setup({
-        defaults = {
-          prompt_prefix = " ",
-          selection_caret = " ",
-          -- normalize backslashes for display
-          path_display = function(_, path)
-            return path:gsub("\\", "/")
-          end,
-          mappings = {
-            i = {
-              ["<Esc>"] = actions.close,
-              ["<C-j>"] = actions.move_selection_next,
-              ["<C-k>"] = actions.move_selection_previous,
-            },
-          },
+    fzf.setup({
+      winopts = {
+        height = 0.85,
+        width = 0.80,
+        row = 0.35,
+        col = 0.50,
+        border = "rounded",
+        preview = {
+          layout = "horizontal",     -- 👈 preview on the right (Telescope-like)
+          horizontal = "right:50%",  -- preview takes 50% of width
+          flip_columns = 120,        -- auto-flip to vertical if window too narrow
         },
-        pickers = {
-          find_files = {
-            find_command = { "rg", "--files", "--hidden", "--glob", "!.git/*", "--path-separator", "/" },
-          },
-          buffers = {
-            -- normalize buffer names
-            path_display = function(_, path)
-              return path:gsub("\\", "/")
-            end,
-          },
-        },
-      })
-    end,
-    keys = {
-      { "<Leader>f", "<Cmd>Telescope find_files<CR>", desc = "Find files" },
-      { "<Leader>g", "<Cmd>Telescope live_grep<CR>",  desc = "Live grep" },
-      { "<Leader>b", "<Cmd>Telescope buffers<CR>",    desc = "List buffers" },
-      { "<Leader>h", "<Cmd>Telescope help_tags<CR>",  desc = "Help tags" },
-    },
-  },
+      },
+
+      files = {
+        prompt = "  Files❯ ",
+        cmd = table.concat({
+          "fd",
+          "--type", "f",
+          "--hidden",
+          "--follow",
+          "--strip-cwd-prefix",
+          "--exclude", ".git",
+          "--exclude", "node_modules",
+          "--exclude", "dist",
+          "--exclude", "build",
+          "--exclude", ".svn"
+        }, " "),
+        git_icons = false,
+        file_icons = true,
+        color_icons = true,
+      },
+
+      grep = {
+        prompt = "  Grep❯ ",
+        rg_opts = table.concat({
+          "--column",
+          "--line-number",
+          "--no-heading",
+          "--color=always",
+          "--smart-case",
+          "--hidden",
+          "--glob", "!.git/*",
+          "--glob", "!node_modules/*",
+          "--glob", "!dist/*",
+          "--glob", "!build/*",
+          "--glob", "!.svn/*",
+        }, " "),
+      },
+
+      buffers = {
+        prompt = "﬘  Buffers❯ ",
+        sort_mru = true,
+        ignore_current_buffer = true,
+      },
+
+      help_tags = { prompt = "  Help❯ " },
+    })
+
+    -- 🔑 Keymaps (same as before)
+    vim.keymap.set("n", "<Leader>f", fzf.files, { desc = "Find files" })
+    vim.keymap.set("n", "<Leader>g", fzf.live_grep, { desc = "Live grep" })
+    vim.keymap.set("n", "<Leader>b", fzf.buffers, { desc = "List buffers" })
+    vim.keymap.set("n", "<Leader>h", fzf.help_tags, { desc = "Help tags" })
+  end,
+},
   {
     "windwp/nvim-autopairs",
     event = "InsertEnter",
@@ -190,32 +218,6 @@ require("lazy").setup({
     end,
   },
   {
-    "stevearc/conform.nvim",
-    config = function()
-      -- Table mapping filetypes to formatters
-      local formatters_by_ft = {
-        javascript = { "prettier" },
-        javascriptreact = { "prettier" },
-        typescript = { "prettier" },
-        typescriptreact = { "prettier" },
-        json = { "prettier" },
-        html = { "prettier" },
-        css = { "prettier" },
-        markdown = { "prettier" },
-        yaml = { "prettier" },
-      }
-
-      require("conform").setup({
-        formatters_by_ft = formatters_by_ft,
-        format_on_save = {
-          timeout_ms = 500,
-          lsp_format = "fallback",
-        },
-      })
-    end,
-    event = { "BufReadPost", "BufNewFile" },
-  },
-  {
     "akinsho/bufferline.nvim",
     version = "*",
     dependencies = "nvim-tree/nvim-web-devicons",
@@ -261,3 +263,5 @@ vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover info" })
 vim.keymap.set("n", "<Leader>d", function()
   vim.diagnostic.open_float(nil, { focusable = false })
 end, { desc = "Show diagnostics for current line/item" })
+vim.keymap.set("n", "<Leader>bp", ":bprevious<CR>", { desc = "Previous buffer" })
+vim.keymap.set("n", "<Leader>bn", ":bnext<CR>", { desc = "Next buffer" })
