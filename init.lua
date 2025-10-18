@@ -10,7 +10,6 @@ vim.opt.shiftwidth = 2 -- set to 0 to default to tabstop value
 vim.opt.shellslash = true
 
 vim.g.mapleader = " "
-
 --require("config.lazy")
 ---- Visit the project page for the latest installation instructions
 -- https://github.com/folke/lazy.nvim
@@ -52,78 +51,104 @@ require("lazy").setup({
       { "<Leader>e", "<Cmd>Oil<CR>", desc = "Open Oil file explorer" },
     },
   },
-{
-  "ibhagwan/fzf-lua",
-  dependencies = { "nvim-tree/nvim-web-devicons" },
-  config = function()
-    local fzf = require("fzf-lua")
+  {
+    "stevearc/conform.nvim",
+    config = function()
+      -- Table mapping filetypes to formatters
+      local formatters_by_ft = {
+        javascript = { "prettier" },
+        javascriptreact = { "prettier" },
+        typescript = { "prettier" },
+        typescriptreact = { "prettier" },
+        json = { "prettier" },
+        html = { "prettier" },
+        css = { "prettier" },
+        markdown = { "prettier" },
+        yaml = { "prettier" },
+      }
 
-    fzf.setup({
-      winopts = {
-        height = 0.85,
-        width = 0.80,
-        row = 0.35,
-        col = 0.50,
-        border = "rounded",
-        preview = {
-          layout = "horizontal",     -- 👈 preview on the right (Telescope-like)
-          horizontal = "right:50%",  -- preview takes 50% of width
-          flip_columns = 120,        -- auto-flip to vertical if window too narrow
+      require("conform").setup({
+        formatters_by_ft = formatters_by_ft,
+        format_on_save = {
+          timeout_ms = 500,
+          lsp_format = "fallback",
         },
-      },
+      })
+    end,
+    event = { "BufReadPost", "BufNewFile" },
+  },
+  {
+    "ibhagwan/fzf-lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      local fzf = require("fzf-lua")
 
-      files = {
-        prompt = "  Files❯ ",
-        cmd = table.concat({
-          "fd",
-          "--type", "f",
-          "--hidden",
-          "--follow",
-          "--strip-cwd-prefix",
-          "--exclude", ".git",
-          "--exclude", "node_modules",
-          "--exclude", "dist",
-          "--exclude", "build",
-          "--exclude", ".svn"
-        }, " "),
-        git_icons = false,
-        file_icons = true,
-        color_icons = true,
-      },
+      fzf.setup({
+        winopts = {
+          height = 0.95,
+          width = 0.95,
+          row = 0.35,
+          col = 0.50,
+          border = "rounded",
+          preview = {
+            layout = "horizontal",    -- 👈 preview on the right (Telescope-like)
+            horizontal = "right:60%", -- preview takes 50% of width
+            flip_columns = 120,       -- auto-flip to vertical if window too narrow
+          },
+        },
 
-      grep = {
-        prompt = "  Grep❯ ",
-        rg_opts = table.concat({
-          "--column",
-          "--line-number",
-          "--no-heading",
-          "--color=always",
-          "--smart-case",
-          "--hidden",
-          "--glob", "!.git/*",
-          "--glob", "!node_modules/*",
-          "--glob", "!dist/*",
-          "--glob", "!build/*",
-          "--glob", "!.svn/*",
-        }, " "),
-      },
+        files = {
+          prompt = "  Files❯ ",
+          cmd = table.concat({
+            "fd",
+            "--type", "f",
+            "--hidden",
+            "--follow",
+            "--strip-cwd-prefix",
+            "--exclude", ".git",
+            "--exclude", "node_modules",
+            "--exclude", "dist",
+            "--exclude", "build",
+            "--exclude", ".svn"
+          }, " "),
+          git_icons = false,
+          file_icons = true,
+          color_icons = true,
+        },
 
-      buffers = {
-        prompt = "﬘  Buffers❯ ",
-        sort_mru = true,
-        ignore_current_buffer = true,
-      },
+        grep = {
+          prompt = "  Grep❯ ",
+          rg_opts = table.concat({
+            "--column",
+            "--line-number",
+            "--no-heading",
+            "--color=always",
+            "--smart-case",
+            "--hidden",
+            "--glob", "!.git/*",
+            "--glob", "!node_modules/*",
+            "--glob", "!dist/*",
+            "--glob", "!build/*",
+            "--glob", "!.svn/*",
+          }, " "),
+        },
 
-      help_tags = { prompt = "  Help❯ " },
-    })
+        buffers = {
+          prompt = "﬘  Buffers❯ ",
+          sort_mru = true,
+          ignore_current_buffer = true,
+        },
 
-    -- 🔑 Keymaps (same as before)
-    vim.keymap.set("n", "<Leader>f", fzf.files, { desc = "Find files" })
-    vim.keymap.set("n", "<Leader>g", fzf.live_grep, { desc = "Live grep" })
-    vim.keymap.set("n", "<Leader>b", fzf.buffers, { desc = "List buffers" })
-    vim.keymap.set("n", "<Leader>h", fzf.help_tags, { desc = "Help tags" })
-  end,
-},
+        help_tags = { prompt = "  Help❯ " },
+      })
+
+      -- 🔑 Keymaps (same as before)
+      vim.keymap.set("n", "<Leader>f", fzf.files, { desc = "Find files" })
+      vim.keymap.set("n", "<Leader>g", fzf.live_grep, { desc = "Live grep" })
+      vim.keymap.set("n", "<Leader>b", fzf.buffers, { desc = "List buffers" })
+      vim.keymap.set("n", "<Leader>h", fzf.help_tags, { desc = "Help tags" })
+    end,
+  },
   {
     "windwp/nvim-autopairs",
     event = "InsertEnter",
@@ -263,5 +288,5 @@ vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover info" })
 vim.keymap.set("n", "<Leader>d", function()
   vim.diagnostic.open_float(nil, { focusable = false })
 end, { desc = "Show diagnostics for current line/item" })
-vim.keymap.set("n", "<Leader>bp", ":bprevious<CR>", { desc = "Previous buffer" })
-vim.keymap.set("n", "<Leader>bn", ":bnext<CR>", { desc = "Next buffer" })
+vim.keymap.set("n", "<Leader>tp", ":bprevious<CR>", { desc = "Previous buffer" })
+vim.keymap.set("n", "<Leader>tn", ":bnext<CR>", { desc = "Next buffer" })
